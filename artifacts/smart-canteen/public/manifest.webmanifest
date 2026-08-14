@@ -1,0 +1,20 @@
+{
+  "name": "المقصف الذكي",
+  "short_name": "المقصف الذكي",
+  "description": "مركز تشغيل التوريد والاستلام والجرد للمقاصف المدرسية.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f1e9",
+  "theme_color": "#163a3d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
