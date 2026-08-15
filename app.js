@@ -15,7 +15,7 @@ let appState = {
         status: "transferred", // الحالات: pending, transferred, received, rejected
         driverHandoverConfirmed: true,
         workerNotes: "تم الاستلام والمطابقة بالكامل بدون نقص",
-        pin: "3912",
+        origin: "manual",
         totalCost: 132.0,
         hasDiscrepancy: false
     }],
@@ -164,7 +164,6 @@ function createShipment() {
         return;
     }
 
-    const pin = Math.floor(1000 + Math.random() * 9000).toString();
     const newShipment = {
         id: generateId("SH"),
         date: formatDate(new Date()),
@@ -176,7 +175,7 @@ function createShipment() {
         status: 'transferred', // تم النقل وينتظر الاستلام
         driverHandoverConfirmed: true,
         workerNotes: "",
-        pin,
+        origin: "manual",
         totalCost,
         hasDiscrepancy: false
     };
@@ -190,7 +189,7 @@ function createShipment() {
     addDriverRow();
     addDriverRow();
     
-    alert(`تم إصدار فاتورة نقل العهدة بنجاح!\nرقم الشحنة: ${newShipment.id}\nرمز التسليم السري (PIN): ${pin}\n(أعطِ هذا الرمز لعامل المقصف عند التسليم)`);
+    alert(`تم إصدار فاتورة نقل العهدة بنجاح!\nرقم الشحنة: ${newShipment.id}\nيمكن لعامل المقصف تأكيد الاستلام مباشرة.`);
     renderAll();
 }
 
@@ -274,9 +273,9 @@ function openReceiveModal(id) {
     if (!shipment) return;
 
     document.getElementById('receive-modal-id').textContent = shipment.id;
-    document.getElementById('receive-modal-pin').value = "";
     document.getElementById('receive-modal-notes').value = "";
     document.getElementById('receive-modal-discrepancy').checked = false;
+    document.getElementById('receive-modal-goods-verified').checked = true;
     
     // إنشاء نموذج المطابقة للأصناف
     const itemsContainer = document.getElementById('receive-modal-items');
@@ -308,17 +307,11 @@ function closeReceiveModal() {
 
 function confirmReceive() {
     const id = document.getElementById('receive-modal-id-hidden').value;
-    const pin = document.getElementById('receive-modal-pin').value;
     const notes = document.getElementById('receive-modal-notes').value;
     const hasDiscrepancy = document.getElementById('receive-modal-discrepancy').checked;
 
     const shipment = appState.shipments.find(s => s.id === id);
     
-    if (shipment.pin !== pin && pin !== "0000") { // 0000 للماستر كي
-        alert("رمز التسليم (PIN) غير صحيح! يرجى طلبه من السائق.");
-        return;
-    }
-
     // التحقق من المطابقة وتحديث الكميات المستلمة (محاكاة)
     let actualItemsReceived = [];
     let isFullyMatched = true;
@@ -463,10 +456,17 @@ function generateAIReport() {
             wasteItem = highWaste.name;
         }
 
+        const receiptNotes = appState.shipments
+            .filter(s => s.status === 'received' && s.workerNotes && s.workerNotes.trim())
+            .slice(0, 3);
+        const discrepancyShipments = appState.shipments.filter(s => s.hasDiscrepancy);
+        const reportNotesHtml = receiptNotes.length
+            ? `<div class="p-3 bg-blue-50 border-r-4 border-blue-500 rounded text-blue-800"><strong>ملاحظات الاستلام:</strong><ul class="list-disc list-inside mt-1">${receiptNotes.map(s => `<li>${s.id}: ${s.workerNotes}</li>`).join('')}</ul></div>`
+            : '';
         const reportText = `
             <div class="space-y-4 text-sm text-gray-700 leading-relaxed">
                 <p><strong><i data-lucide="sparkles" class="w-4 h-4 inline text-purple-500"></i> ملخص التحليل الذكي:</strong></p>
-                <p>تم تحليل بيانات التوريد والمبيعات اليومية للمقاصف. الأداء العام مستقر، وتم استلام ${appState.shipments.filter(s=>s.status==='received').length} شحنات بنجاح.</p>
+                <p>تم تحليل بيانات التوريد والاستلام والجرد اليومية للمقاصف. الأداء العام مستقر، وتم استلام ${appState.shipments.filter(s=>s.status==='received').length} شحنات بنجاح.</p>
                 
                 ${wasteIssue ? `
                 <div class="p-3 bg-red-50 border-r-4 border-red-500 rounded text-red-800">
@@ -477,11 +477,12 @@ function generateAIReport() {
                     <strong>مؤشر إيجابي:</strong> معدلات التوالف في الحدود الطبيعية جداً (أقل من 2%).
                 </div>
                 `}
+                ${reportNotesHtml}
                 
                 <p><strong>التوصيات:</strong></p>
                 <ul class="list-disc list-inside space-y-1 pr-2">
                     <li>مراجعة مطابقة الكميات الطازجة غداً صباحاً.</li>
-                    <li>تسوية العجز المالي البالغ (0 ر.س) مع المحاسبة.</li>
+                    <li>${discrepancyShipments.length ? `متابعة ${discrepancyShipments.length} شحنات تحمل تبايناً مسجلاً.` : 'لا توجد ملاحظات استلام معلقة حالياً.'}</li>
                 </ul>
             </div>
         `;

@@ -222,8 +222,6 @@ button:disabled { cursor: not-allowed; opacity: .56; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 1.3rem; border-bottom: 1px solid hsl(var(--border)); }
 .modal-body { display: grid; gap: 1rem; padding: 1.3rem; }
 .modal-footer { display: flex; gap: .65rem; padding: 0 1.3rem 1.3rem; }
-.pin-box { padding: .85rem; border: 1px solid hsl(38 82% 75%); border-radius: .8rem; background: hsl(38 82% 94%); }
-.pin-input { text-align: center; font-family: var(--font-mono); font-size: 1.2rem; letter-spacing: .3em; direction: ltr; }
 .report-box { min-height: 180px; padding: 1.1rem; border: 1px solid hsl(var(--border)); border-radius: .85rem; background: hsl(var(--muted) / .55); line-height: 1.9; font-size: .86rem; }
 .report-alert { padding: .75rem; border-radius: .65rem; color: hsl(8 57% 35%); background: hsl(8 70% 93%); border-right: 3px solid hsl(var(--destructive)); }
 .report-positive { padding: .75rem; border-radius: .65rem; color: hsl(153 42% 26%); background: hsl(151 39% 90%); border-right: 3px solid hsl(153 42% 42%); }

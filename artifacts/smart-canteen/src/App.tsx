@@ -12,7 +12,6 @@ import {
   Cpu,
   Download,
   FileText,
-  KeyRound,
   LoaderCircle,
   LogOut,
   PackageCheck,
@@ -61,7 +60,7 @@ type Shipment = {
   status: ShipmentStatus;
   driverHandoverConfirmed: boolean;
   workerNotes: string;
-  pin: string;
+  origin: 'manual' | 'whatsapp';
   totalCost: number;
   hasDiscrepancy: boolean;
   actualItemsReceived?: ReceivedItem[];
@@ -102,7 +101,7 @@ const seedData: AppData = {
       status: 'transferred',
       driverHandoverConfirmed: true,
       workerNotes: '',
-      pin: '3912',
+      origin: 'manual',
       totalCost: 132,
       hasDiscrepancy: false,
     },
@@ -114,7 +113,7 @@ const seedData: AppData = {
 };
 
 const roleMeta = {
-  driver: { title: 'السائق والمورد', fullTitle: 'إصدار الشحنات', icon: Truck, blurb: 'سجّل التوريد، أرفق الأصناف، وسلّم رمز المطابقة.' },
+  driver: { title: 'السائق والمورد', fullTitle: 'إصدار الشحنات', icon: Truck, blurb: 'سجّل التوريد وأرفق الأصناف لتصل إلى سجل الاستلام.' },
   worker: { title: 'عامل المقصف', fullTitle: 'الاستلام والمطابقة', icon: PackageCheck, blurb: 'طابق الوارد مع الفاتورة وحدث عهدة المقصف فوراً.' },
   audit: { title: 'مسؤول الجرد', fullTitle: 'الجرد والرقابة', icon: ClipboardCheck, blurb: 'اعتمد الرصيد الفعلي وسجّل التالف في نهاية اليوم.' },
   admin: { title: 'الإدارة التنفيذية', fullTitle: 'المؤشرات والتقارير', icon: BarChart3, blurb: 'تابع التدفق التشغيلي واتخذ القرار من قراءة واحدة.' },
@@ -125,7 +124,15 @@ function loadData(): AppData {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as AppData;
-      if (Array.isArray(parsed.shipments) && Array.isArray(parsed.inventory)) return parsed;
+      if (Array.isArray(parsed.shipments) && Array.isArray(parsed.inventory)) {
+        return {
+          ...parsed,
+          shipments: parsed.shipments.map((shipment) => ({
+            ...shipment,
+            origin: shipment.origin === 'whatsapp' ? 'whatsapp' : 'manual',
+          })),
+        };
+      }
     }
   } catch {
     // A damaged local cache should never prevent the operational shell from opening.
@@ -436,7 +443,7 @@ function DriverView({ data, setData, showNotice }: { data: AppData; setData: Dis
     { name: 'ساندوتش دجاج طازج', type: 'طازج', qty: 40, cost: 2.5, price: 4 },
     { name: 'عصير مشكل 200 مل', type: 'معلبات', qty: 50, cost: 1.2, price: 2 },
   ]);
-  const [lastReceipt, setLastReceipt] = useState<{ id: string; pin: string } | null>(null);
+  const [lastReceipt, setLastReceipt] = useState<{ id: string } | null>(null);
   const total = useMemo(() => items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.cost) || 0), 0), [items]);
 
   const updateItem = (index: number, key: keyof ShipmentItem, value: string) => {
@@ -462,7 +469,6 @@ function DriverView({ data, setData, showNotice }: { data: AppData; setData: Dis
     if (!supplier || !canteen) return showNotice('error', 'يرجى تحديد المورد والمقصف.');
     if (invalid) return showNotice('error', 'راجع بيانات الأصناف: الاسم والكمية والتكلفة مطلوبة.');
     if (!validItems.length) return showNotice('error', 'أضف صنفاً واحداً صحيحاً على الأقل قبل الإرسال.');
-    const pin = String(Math.floor(1000 + Math.random() * 9000));
     const shipment: Shipment = {
       id: makeId('SH'),
       date: dateStamp(),
@@ -474,12 +480,12 @@ function DriverView({ data, setData, showNotice }: { data: AppData; setData: Dis
       status: 'transferred',
       driverHandoverConfirmed: true,
       workerNotes: '',
-      pin,
+      origin: 'manual',
       totalCost: validItems.reduce((sum, item) => sum + Number(item.qty) * Number(item.cost), 0),
       hasDiscrepancy: false,
     };
     setData((current) => ({ ...current, shipments: [shipment, ...current.shipments] }));
-    setLastReceipt({ id: shipment.id, pin });
+    setLastReceipt({ id: shipment.id });
     setInvoiceRef('');
     setNotes('');
     setItems([{ name: '', type: 'معلبات', qty: '', cost: '', price: '' }, { name: '', type: 'طازج', qty: '', cost: '', price: '' }]);
@@ -488,8 +494,8 @@ function DriverView({ data, setData, showNotice }: { data: AppData; setData: Dis
 
   return (
     <section>
-      <PageIntro eyebrow="مسار التوريد / 01" title="إصدار شحنة جديدة" subtitle="سجّل الأصناف قبل مغادرة المورد، وسيُنشأ رمز المطابقة تلقائياً." icon={Truck} />
-      {lastReceipt && <div className="notice notice-success fade-up" style={{ marginBottom: '1rem' }} data-testid="shipment-created-success"><CheckCircle2 size={18} /><span>تم الإنشاء: <strong className="mono">{lastReceipt.id}</strong> — رمز الاستلام <strong className="mono">{lastReceipt.pin}</strong> <span style={{ opacity: .75 }}>شارك الرمز مع عامل المقصف.</span></span></div>}
+      <PageIntro eyebrow="مسار التوريد / 01" title="إصدار شحنة جديدة" subtitle="سجّل الأصناف قبل مغادرة المورد، وسيظهر سجل الاستلام مباشرة لعامل المقصف." icon={Truck} />
+      {lastReceipt && <div className="notice notice-success fade-up" style={{ marginBottom: '1rem' }} data-testid="shipment-created-success"><CheckCircle2 size={18} /><span>تم إنشاء الشحنة <strong className="mono">{lastReceipt.id}</strong> وحفظها في سجل الاستلام.</span></div>}
       <div className="card card-pad fade-up delay-1">
         <div className="section-heading">
           <div><h2><Receipt size={18} style={{ verticalAlign: 'middle', marginLeft: '.4rem', color: 'hsl(var(--primary))' }} /> بيانات الفاتورة</h2><p>تظهر هذه البيانات في سجل الاستلام والتقرير التنفيذي.</p></div>
@@ -524,7 +530,7 @@ function DriverView({ data, setData, showNotice }: { data: AppData; setData: Dis
         </div>
         <div className="total-bar" style={{ marginTop: '1rem' }}><span style={{ fontWeight: 700 }}>إجمالي تكلفة العهدة</span><span className="total-value">{formatCurrency(total)}</span></div>
         <div className="field" style={{ marginTop: '1rem' }}><label htmlFor="driver-notes">ملاحظات السائق</label><textarea id="driver-notes" className="textarea" placeholder="أي ملاحظات حول التوصيل أو حالة الأصناف..." value={notes} onChange={(e) => setNotes(e.target.value)} data-testid="textarea-driver-notes" /></div>
-        <button className="button button-accent button-block" style={{ marginTop: '1rem', minHeight: 48 }} onClick={createShipment} data-testid="button-create-shipment"><Send size={17} /> إرسال وتوليد رمز الاستلام</button>
+        <button className="button button-accent button-block" style={{ marginTop: '1rem', minHeight: 48 }} onClick={createShipment} data-testid="button-create-shipment"><Send size={17} /> إرسال الشحنة مباشرة</button>
       </div>
     </section>
   );
@@ -543,9 +549,9 @@ function WorkerView({ data, setData, showNotice }: { data: AppData; setData: Dis
   const [receiveId, setReceiveId] = useState<string | null>(null);
   const shipment = data.shipments.find((item) => item.id === receiveId);
   const [actualQtys, setActualQtys] = useState<Record<string, string>>({});
-  const [pin, setPin] = useState('');
   const [notes, setNotes] = useState('');
   const [markDiscrepancy, setMarkDiscrepancy] = useState(false);
+  const [goodsVerified, setGoodsVerified] = useState(true);
   const filtered = data.shipments.filter((item) => {
     const matchesQuery = `${item.id} ${item.supplier}`.toLowerCase().includes(query.toLowerCase());
     return matchesQuery && (statusFilter === 'all' || item.status === statusFilter);
@@ -556,14 +562,13 @@ function WorkerView({ data, setData, showNotice }: { data: AppData; setData: Dis
     if (!selected) return;
     setReceiveId(id);
     setActualQtys(Object.fromEntries(selected.items.map((item) => [item.name, String(item.qty)])));
-    setPin('');
     setNotes('');
     setMarkDiscrepancy(false);
+    setGoodsVerified(true);
   };
   const closeReceive = () => setReceiveId(null);
   const confirmReceive = () => {
     if (!shipment) return;
-    if (pin !== shipment.pin && pin !== '0000') return showNotice('error', 'رمز الاستلام غير صحيح. اطلب الرمز من السائق.');
     const actualItemsReceived = shipment.items.map((item) => ({ ...item, receivedQty: Math.max(0, Number(actualQtys[item.name]) || 0) }));
     const mismatch = actualItemsReceived.some((item) => item.receivedQty !== Number(item.qty));
     setData((current) => {
@@ -622,7 +627,7 @@ function WorkerView({ data, setData, showNotice }: { data: AppData; setData: Dis
       </div>
       {filtered.length === 0 ? <div className="card empty-state fade-up" data-testid="empty-worker-shipments"><div className="empty-icon"><Search size={22} /></div><strong>لا توجد شحنات مطابقة</strong><span style={{ marginTop: '.3rem', fontSize: '.78rem' }}>جرّب تغيير حالة العرض أو أنشئ شحنة جديدة من مساحة السائق.</span></div> : <div className="shipment-grid">{filtered.map((item, index) => <ShipmentCard key={item.id} shipment={item} index={index} onReceive={openReceive} />)}</div>}
 
-      {shipment && <ReceiveModal shipment={shipment} actualQtys={actualQtys} setActualQtys={setActualQtys} pin={pin} setPin={setPin} notes={notes} setNotes={setNotes} markDiscrepancy={markDiscrepancy} setMarkDiscrepancy={setMarkDiscrepancy} onClose={closeReceive} onConfirm={confirmReceive} />}
+      {shipment && <ReceiveModal shipment={shipment} actualQtys={actualQtys} setActualQtys={setActualQtys} notes={notes} setNotes={setNotes} goodsVerified={goodsVerified} setGoodsVerified={setGoodsVerified} markDiscrepancy={markDiscrepancy} setMarkDiscrepancy={setMarkDiscrepancy} onClose={closeReceive} onConfirm={confirmReceive} />}
     </section>
   );
 }
@@ -635,7 +640,7 @@ function ShipmentCard({ shipment, index, onReceive }: { shipment: Shipment; inde
     <article className="card card-pad shipment-card fade-up" style={{ '--status-color': pending ? 'hsl(var(--accent))' : shipment.status === 'received' ? 'hsl(153 42% 42%)' : 'hsl(var(--destructive))', animationDelay: `${index * 70}ms` } as CSSProperties} data-testid={`card-shipment-${shipment.id}`}>
       <div className="shipment-top">
         <div><div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}><h3 className="shipment-id">{shipment.id}</h3><span className={`pill ${statusClass}`}>{statusText}</span></div><div className="shipment-meta"><Clock3 size={13} /> {shipment.date}</div></div>
-        <div style={{ textAlign: 'left' }}><strong style={{ display: 'block', fontSize: '.82rem' }}>{shipment.supplier}</strong><span style={{ color: 'hsl(var(--muted-foreground))', fontSize: '.7rem' }}>{shipment.invoiceRef || 'بدون مرجع'}</span></div>
+        <div style={{ textAlign: 'left' }}><strong style={{ display: 'block', fontSize: '.82rem' }}>{shipment.supplier}</strong><span style={{ color: 'hsl(var(--muted-foreground))', fontSize: '.7rem' }}>{shipment.invoiceRef || 'بدون مرجع'}</span><span className="pill pill-blue" style={{ marginTop: '.35rem' }}>{shipment.origin === 'whatsapp' ? 'WhatsApp' : 'إدخال يدوي'}</span></div>
       </div>
       <div className="items-box"><div style={{ fontSize: '.74rem', fontWeight: 800, marginBottom: '.35rem' }}>الأصناف المرفقة</div>{shipment.items.map((item) => <div className="item-line" key={item.name}><span>{item.name}</span><strong className="mono">{item.qty} حبة</strong></div>)}</div>
       {pending ? <button className="button button-primary button-block" style={{ marginTop: '1rem' }} onClick={() => onReceive(shipment.id)} data-testid={`button-receive-${shipment.id}`}><CheckCircle2 size={16} /> مطابقة واستلام</button> : <div style={{ marginTop: '1rem', paddingTop: '.8rem', borderTop: '1px solid hsl(var(--border))', fontSize: '.78rem' }}><strong>ملاحظات الاستلام:</strong> {shipment.workerNotes || 'لا توجد'}{shipment.hasDiscrepancy && <div style={{ color: 'hsl(var(--destructive))', marginTop: '.35rem', fontWeight: 700 }}><CircleAlert size={14} style={{ verticalAlign: 'middle', marginLeft: '.25rem' }} /> تم تسجيل تباين في الكميات</div>}</div>}
@@ -643,18 +648,18 @@ function ShipmentCard({ shipment, index, onReceive }: { shipment: Shipment; inde
   );
 }
 
-function ReceiveModal({ shipment, actualQtys, setActualQtys, pin, setPin, notes, setNotes, markDiscrepancy, setMarkDiscrepancy, onClose, onConfirm }: { shipment: Shipment; actualQtys: Record<string, string>; setActualQtys: (value: Record<string, string>) => void; pin: string; setPin: (value: string) => void; notes: string; setNotes: (value: string) => void; markDiscrepancy: boolean; setMarkDiscrepancy: (value: boolean) => void; onClose: () => void; onConfirm: () => void }) {
+function ReceiveModal({ shipment, actualQtys, setActualQtys, notes, setNotes, goodsVerified, setGoodsVerified, markDiscrepancy, setMarkDiscrepancy, onClose, onConfirm }: { shipment: Shipment; actualQtys: Record<string, string>; setActualQtys: (value: Record<string, string>) => void; notes: string; setNotes: (value: string) => void; goodsVerified: boolean; setGoodsVerified: (value: boolean) => void; markDiscrepancy: boolean; setMarkDiscrepancy: (value: boolean) => void; onClose: () => void; onConfirm: () => void }) {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" data-testid="receive-modal">
       <div className="modal fade-up">
         <div className="modal-header"><div><div className="eyebrow" style={{ color: 'hsl(var(--primary))' }}>مطابقة ميدانية</div><h2 style={{ margin: '.25rem 0 0', fontSize: '1.15rem' }}>تأكيد استلام <span className="mono" style={{ color: 'hsl(var(--primary))' }}>{shipment.id}</span></h2></div><button className="button button-ghost icon-button button-sm" onClick={onClose} aria-label="إغلاق" data-testid="button-close-receive"><X size={18} /></button></div>
         <div className="modal-body">
           <div><label style={{ display: 'block', fontWeight: 700, fontSize: '.78rem', marginBottom: '.55rem' }}>طابق الكميات الفعلية المستلمة</label><div style={{ display: 'grid', gap: '.5rem' }}>{shipment.items.map((item) => <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '.8rem', padding: '.65rem .75rem', border: '1px solid hsl(var(--border))', borderRadius: '.7rem' }}><div style={{ minWidth: 0 }}><strong style={{ display: 'block', fontSize: '.8rem' }}>{item.name}</strong><span style={{ color: 'hsl(var(--muted-foreground))', fontSize: '.7rem' }}>{item.type} · المرسل <span className="mono">{item.qty}</span></span></div><input className="input number-input" type="number" min="0" value={actualQtys[item.name] ?? ''} onChange={(e) => setActualQtys({ ...actualQtys, [item.name]: e.target.value })} data-testid={`input-received-qty-${item.name}`} /></div>)}</div></div>
-          <div className="pin-box"><label htmlFor="receive-pin" style={{ display: 'flex', alignItems: 'center', gap: '.35rem', fontWeight: 800, fontSize: '.78rem', color: 'hsl(28 67% 31%)', marginBottom: '.45rem' }}><KeyRound size={15} /> رمز الاستلام السري</label><input id="receive-pin" className="input pin-input" maxLength={4} inputMode="numeric" type="password" placeholder="0000" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} data-testid="input-receive-pin" /><span style={{ display: 'block', marginTop: '.4rem', color: 'hsl(28 50% 40%)', fontSize: '.68rem' }}>للاختبار السريع: يقبل النظام الرمز الرئيسي 0000.</span></div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.85rem', border: '1px solid hsl(151 32% 78%)', borderRadius: '.8rem', background: 'hsl(151 39% 92%)', color: 'hsl(153 42% 26%)', fontSize: '.78rem', fontWeight: 800 }}><input type="checkbox" checked={goodsVerified} onChange={(e) => setGoodsVerified(e.target.checked)} data-testid="checkbox-goods-verified" /> البضاعة موثقة ومستلمة مباشرة</label>
           <Field label="ملاحظات المستلم"><textarea className="textarea" rows={2} placeholder="اكتب ملاحظاتك إن وجدت..." value={notes} onChange={(e) => setNotes(e.target.value)} data-testid="textarea-receive-notes" /></Field>
           <label style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: 'hsl(var(--destructive))', fontSize: '.75rem', fontWeight: 700 }}><input type="checkbox" checked={markDiscrepancy} onChange={(e) => setMarkDiscrepancy(e.target.checked)} data-testid="checkbox-discrepancy" /> تسجيل تباين أو عجز وإحالته للإدارة</label>
         </div>
-        <div className="modal-footer"><button className="button button-accent" style={{ flex: 1 }} onClick={onConfirm} data-testid="button-confirm-receive"><CheckCircle2 size={17} /> تأكيد الاستلام نهائياً</button><button className="button button-ghost" onClick={onClose} data-testid="button-cancel-receive">إلغاء</button></div>
+        <div className="modal-footer"><button className="button button-accent" style={{ flex: 1 }} onClick={onConfirm} data-testid="button-confirm-receive"><CheckCircle2 size={17} /> تأكيد مباشر للاستلام</button><button className="button button-ghost" onClick={onClose} data-testid="button-cancel-receive">إلغاء</button></div>
       </div>
     </div>
   );
@@ -693,7 +698,9 @@ function AdminView({ data, showNotice }: { data: AppData; showNotice: WorkspaceP
     setReporting(true);
     window.setTimeout(() => {
       const highWaste = data.inventory.find((item) => item.wasted > item.receivedQty * .05);
-      setReport(<div style={{ display: 'grid', gap: '.8rem' }}><p style={{ margin: 0, fontWeight: 800 }}><Sparkles size={16} style={{ verticalAlign: 'middle', marginLeft: '.3rem', color: 'hsl(var(--accent))' }} /> ملخص التحليل الذكي</p><p style={{ margin: 0 }}>تم تحليل سجل التوريد والجرد المحلي. أُغلقت <strong>{received}</strong> شحنات بنجاح من أصل <strong>{data.shipments.length}</strong>، بقيمة مخزون حالية <strong>{formatCurrency(totalValue)}</strong>.</p>{highWaste ? <div className="report-alert"><strong>تنبيه هدر:</strong> ارتفع التالف في صنف «{highWaste.name}» عن الحد التشغيلي. يوصى بخفض كمية التوريد التالية بنسبة 10% ومراجعة ظروف الحفظ.</div> : <div className="report-positive"><strong>مؤشر إيجابي:</strong> مستويات التالف ضمن الحدود الطبيعية. استمر في مطابقة الأصناف الطازجة صباحاً.</div>}<div><strong>التوصيات العملية</strong><ul style={{ margin: '.35rem 0 0', paddingRight: '1.1rem' }}><li>مراجعة الكميات الطازجة قبل بدء الطابور الصباحي.</li><li>{issues ? `متابعة ${issues} ملاحظة استلام مع المورد.` : 'لا توجد ملاحظات استلام معلقة حالياً.'}</li><li>تثبيت اعتماد الجرد قبل إغلاق اليوم الدراسي.</li></ul></div></div>);
+      const receiptNotes = data.shipments.filter((item) => item.status === 'received' && item.workerNotes.trim()).slice(0, 3);
+      const discrepancyShipments = data.shipments.filter((item) => item.hasDiscrepancy);
+      setReport(<div style={{ display: 'grid', gap: '.8rem' }}><p style={{ margin: 0, fontWeight: 800 }}><Sparkles size={16} style={{ verticalAlign: 'middle', marginLeft: '.3rem', color: 'hsl(var(--accent))' }} /> ملخص التحليل الذكي</p><p style={{ margin: 0 }}>تم تحليل سجل التوريد والاستلام والجرد المحلي. أُغلقت <strong>{received}</strong> شحنات بنجاح من أصل <strong>{data.shipments.length}</strong>، بقيمة مخزون حالية <strong>{formatCurrency(totalValue)}</strong>.</p>{highWaste ? <div className="report-alert"><strong>تنبيه هدر:</strong> ارتفع التالف في صنف «{highWaste.name}» عن الحد التشغيلي. يوصى بخفض كمية التوريد التالية بنسبة 10% ومراجعة ظروف الحفظ.</div> : <div className="report-positive"><strong>مؤشر إيجابي:</strong> مستويات التالف ضمن الحدود الطبيعية. استمر في مطابقة الأصناف الطازجة صباحاً.</div>}{receiptNotes.length > 0 && <div className="notice notice-info"><strong>ملاحظات الاستلام:</strong><ul style={{ margin: '.35rem 0 0', paddingRight: '1.1rem' }}>{receiptNotes.map((item) => <li key={item.id}>{item.id}: {item.workerNotes}</li>)}</ul></div>}<div><strong>التوصيات العملية</strong><ul style={{ margin: '.35rem 0 0', paddingRight: '1.1rem' }}><li>مراجعة الكميات الطازجة قبل بدء الطابور الصباحي.</li><li>{discrepancyShipments.length ? `متابعة ${discrepancyShipments.length} شحنات تحمل تبايناً مسجلاً.` : issues ? `متابعة ${issues} ملاحظة استلام مع المورد.` : 'لا توجد ملاحظات استلام معلقة حالياً.'}</li><li>تثبيت اعتماد الجرد قبل إغلاق اليوم الدراسي.</li></ul></div></div>);
       setReporting(false);
       showNotice('success', 'تم توليد التقرير التنفيذي من البيانات الحالية.');
     }, 850);

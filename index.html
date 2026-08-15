@@ -146,7 +146,7 @@
                     </div>
 
                     <button onclick="createShipment()" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-100">
-                        <i data-lucide="send" class="w-5 h-5"></i> إرسال وتوليد رمز الاستلام (PIN)
+                        <i data-lucide="send" class="w-5 h-5"></i> إرسال الشحنة مباشرة
                     </button>
                 </div>
             </section>
@@ -287,10 +287,10 @@
                 </div>
             </div>
 
-            <div class="bg-amber-50 p-3 rounded-xl border border-amber-200">
-                <label class="block text-xs font-bold text-amber-800 mb-1">رمز الاستلام الخاص بالسائق (PIN):</label>
-                <input type="password" id="receive-modal-pin" maxlength="4" placeholder="أدخل الرمز المكون من 4 أرقام" class="w-full border rounded-lg p-2.5 text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-amber-500 bg-white">
-            </div>
+            <label class="flex items-center gap-2 p-3 rounded-xl border border-green-200 bg-green-50 text-green-800 text-xs font-bold">
+                <input type="checkbox" id="receive-modal-goods-verified" class="w-4 h-4 text-green-600 rounded" checked>
+                البضاعة موثقة ومستلمة مباشرة
+            </label>
 
             <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1">ملاحظات المستلم (في حال وجود عجز أو تلف)</label>
@@ -303,7 +303,7 @@
             </div>
 
             <div class="flex gap-3 pt-2">
-                <button onclick="confirmReceive()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold transition-colors">تأكيد الاستلام نهائياً</button>
+                <button onclick="confirmReceive()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold transition-colors">تأكيد مباشر للاستلام</button>
                 <button onclick="closeReceiveModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl font-semibold transition-colors">إلغاء</button>
             </div>
         </div>
