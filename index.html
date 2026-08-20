@@ -3,29 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام المقصف الذكي | Smart Canteen System</title>
-    
-    <!-- 1. مكتبة Tailwind CSS للتنسيقات السريعة -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. مكتبة Lucide للأيقونات -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- 3. مكتبة قارئ الـ QR Code عبر الكاميرا -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    
-    <!-- 4. ملف التنسيقات الخاص بالمشروع -->
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body class="bg-slate-50 min-h-screen text-gray-800 antialiased">
+    <title>نظام المقصف الذكي - MVP v2.0</title>
 
-    <!-- ========================================== -->
-    <!-- 🔑 شاشة تسجيل الدخول (اختيار نوع المستخدم) -->
-    <!-- ========================================== -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 fade-in">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- HTML5 QR Code Scanner CDN -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f8fafc;
+        }
+        @media print {
+            body * { visibility: hidden; }
+            #ai-report-content, #ai-report-content * { visibility: visible; }
+            #ai-report-content { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <!-- شاشة تسجيل الدخول (Login Screen) -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-slate-900 bg-opacity-95">
+        <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
             <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl mb-4">
                     <i data-lucide="store" class="w-8 h-8"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-gray-900">نظام المقصف الذكي</h1>
@@ -35,7 +46,7 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">اختر نوع الحساب للتجربة:</label>
-                    <select id="login-role" class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-sm">
+                    <select id="login-role" class="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50">
                         <option value="">-- اختر صلاحية الدخول --</option>
                         <option value="driver">🚚 السائق (المورد)</option>
                         <option value="worker">🏫 عامل المقصف (المستلم)</option>
@@ -44,221 +55,220 @@
                     </select>
                 </div>
 
-                <div id="login-error" class="text-red-500 text-xs hidden flex items-center gap-1">
-                    <i data-lucide="alert-circle" class="w-4 h-4"></i> يرجى اختيار صلاحية الدخول أولاً.
-                </div>
+                <p id="login-error" class="text-red-500 text-xs hidden font-medium text-center">يرجى اختيار صلاحية الدخول أولاً.</p>
 
-                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-colors shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
-                    دخول للنظام <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
+                    <i data-lucide="log-in" class="w-5 h-5"></i>
+                    دخول للنظام
                 </button>
             </div>
-            
-            <div class="mt-8 pt-6 border-t border-gray-100 text-center text-xs text-gray-400">
-                إصدار تجريبي MVP v2.0 - نظام تشغيل المقاصف
+
+            <div class="mt-8 text-center border-t pt-4 border-gray-100">
+                <p class="text-xs text-gray-400">إصدار تجريبي MVP v2.0 - نظام تشغيل المقاصف</p>
             </div>
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 🌐 الشاشة الرئيسية للتطبيق (App Shell)    -->
-    <!-- ========================================== -->
+    <!-- التطبيق الرئيسي (Main App Screen) -->
     <div id="app-screen" class="hidden min-h-screen flex flex-col">
-        
         <!-- الشريط العلوي (Navbar) -->
-        <header class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm no-print">
-            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+        <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg">
                         <i data-lucide="store" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h2 class="font-bold text-gray-900 text-base leading-tight">المقصف الذكي</h2>
-                        <span id="current-role-title" class="text-xs text-blue-600 font-semibold">الصلاحية</span>
+                        <h2 class="font-bold text-gray-900 leading-tight">المقصف الذكي</h2>
+                        <span id="current-role-title" class="text-xs text-blue-600 font-medium"></span>
                     </div>
                 </div>
 
-                <button onclick="logout()" class="text-gray-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1 text-sm">
+                <button onclick="logout()" class="text-gray-500 hover:text-red-600 p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1 text-sm font-semibold">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">خروج</span>
+                    خروج
                 </button>
             </div>
         </header>
 
-        <!-- المحتوى المتغير حسب الصلاحية -->
-        <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
-            
-            <!-- 🚚 1. لوحة السائق (المورد) -->
-            <section id="driver-panel" class="hidden space-y-6 fade-in">
+        <!-- المحتوى الرئيسي (Main Body) -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+            <!-- 1. لوحة السائق (Driver Panel) -->
+            <section id="driver-panel" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                            <i data-lucide="truck" class="text-blue-600"></i> إصدار فاتورة عهدة جديدة
-                        </h3>
-                        <span class="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium">تسليم ميداني</span>
+                    <div class="flex items-center justify-between mb-6 border-b pb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <i data-lucide="truck" class="w-5 h-5 text-blue-600"></i>
+                                إصدار فاتورة عهدة جديدة
+                            </h3>
+                            <p class="text-xs text-gray-500">تسليم ميداني</p>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">المورد / الموزع</label>
-                            <input type="text" id="driver-supplier" value="شركة المراعي والجملة" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500">
+                            <input type="text" id="driver-supplier" class="w-full border rounded-lg p-2.5 text-sm bg-gray-50" value="شركة المراعي والجملة">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">المقصف المستهدف</label>
-                            <select id="driver-canteen" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500">
+                            <select id="driver-canteen" class="w-full border rounded-lg p-2.5 text-sm bg-gray-50">
                                 <option value="المقصف الرئيسي - مدرسة الأمل">المقصف الرئيسي - مدرسة الأمل</option>
                                 <option value="مقصف المرحلة الثانوية">مقصف المرحلة الثانوية</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الفاتورة الورقية (إن وجد)</label>
-                            <input type="text" id="driver-invoice" placeholder="مثال: INV-9902" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 font-mono">
+                            <input type="text" id="driver-invoice" class="w-full border rounded-lg p-2.5 text-sm font-mono" placeholder="INV-0000">
                         </div>
                     </div>
 
-                    <!-- جدول إضافة المنتجات -->
+                    <!-- جدول الأصناف -->
                     <div class="overflow-x-auto mb-4">
-                        <table class="w-full text-right border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50 text-xs text-gray-500 border-b">
-                                    <th class="p-3">اسم الصنف</th>
+                        <table class="w-full text-right text-sm">
+                            <thead class="bg-gray-50 text-gray-600 text-xs">
+                                <tr>
+                                    <th class="p-3 rounded-r-lg">اسم الصنف</th>
                                     <th class="p-3">النوع</th>
-                                    <th class="p-3 w-28">الكمية</th>
-                                    <th class="p-3 w-28">التكلفة (ر.س)</th>
-                                    <th class="p-3 w-28">سعر البيع</th>
-                                    <th class="p-3 w-12 text-center">إجراء</th>
+                                    <th class="p-3">الكمية</th>
+                                    <th class="p-3">التكلفة (ر.س)</th>
+                                    <th class="p-3">سعر البيع</th>
+                                    <th class="p-3 text-center rounded-l-lg">إجراء</th>
                                 </tr>
                             </thead>
-                            <tbody id="driver-items-body">
-                                <!-- يتم إدراج الصفوف تلقائياً عبر JS -->
-                            </tbody>
+                            <tbody id="driver-items-body"></tbody>
                         </table>
                     </div>
 
-                    <div class="flex justify-between items-center pt-2">
-                        <button onclick="addDriverRow()" class="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
-                            <i data-lucide="plus-circle" class="w-4 h-4"></i> إضافة صنف آخر
+                    <div class="flex justify-between items-center mb-6">
+                        <button onclick="addDriverRow()" class="text-blue-600 hover:text-blue-700 text-sm font-bold flex items-center gap-1">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            إضافة صنف آخر
                         </button>
                     </div>
 
-                    <div class="mt-6">
+                    <div class="mb-6">
                         <label class="block text-xs font-semibold text-gray-600 mb-1">ملاحظات السائق</label>
-                        <textarea id="driver-notes" rows="2" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500" placeholder="أي ملاحظات حول التوصيل أو الحالة..."></textarea>
+                        <textarea id="driver-notes" class="w-full border rounded-lg p-2 text-sm h-20" placeholder="أي ملاحظات تخص التسليم..."></textarea>
                     </div>
 
-                    <button onclick="createShipment()" class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-100">
-                        <i data-lucide="send" class="w-5 h-5"></i> إرسال الشحنة مباشرة
+                    <button onclick="createShipment()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                        إرسال الشحنة مباشرة
                     </button>
                 </div>
             </section>
 
-            <!-- 🏫 2. لوحة عامل المقصف (المستلم) -->
-            <section id="worker-panel" class="hidden space-y-6 fade-in">
-                <!-- أدوات البحث والفلترة -->
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-3 justify-between items-center">
-                    <div class="flex gap-2 w-full md:w-auto flex-1">
-                        <input type="text" id="worker-search" oninput="applyWorkerFilter()" placeholder="بحث برقم الشحنة أو المورد..." class="w-full border rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500">
-                        <select id="worker-status-filter" onchange="applyWorkerFilter()" class="border rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500">
+            <!-- 2. لوحة عامل المقصف (Worker Panel) -->
+            <section id="worker-panel" class="hidden space-y-6">
+                <div class="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                    <div class="flex gap-2 w-full sm:w-auto flex-1">
+                        <input type="text" id="worker-search" onkeyup="applyWorkerFilter()" placeholder="بحث برقم الشحنة أو المورد..." class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500">
+                        <select id="worker-status-filter" onchange="applyWorkerFilter()" class="border rounded-lg p-2.5 text-sm bg-gray-50">
                             <option value="all">كل الحالات</option>
                             <option value="transferred">بانتظار الاستلام</option>
                             <option value="received">تم الاستلام</option>
                         </select>
                     </div>
-                    
-                    <button onclick="startScanner()" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
-                        <i data-lucide="qr-code" class="w-4 h-4"></i> مسح باركود الشحنة
+                    <button onclick="startScanner()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+                        <i data-lucide="qr-code" class="w-4 h-4"></i>
+                        مسح باركود الشحنة
                     </button>
                 </div>
 
-                <!-- كاميرا مسح الباركود (مخفية افتراضياً) -->
-                <div id="scanner-container" class="hidden bg-white p-4 rounded-2xl border border-gray-200 text-center">
-                    <div id="reader" class="max-w-xs mx-auto mb-3"></div>
-                    <button onclick="stopScanner()" class="text-xs text-red-600 font-bold hover:underline">إغلاق الكاميرا</button>
+                <!-- ماسح الكاميرا -->
+                <div id="scanner-container" class="hidden bg-white p-4 rounded-xl border border-gray-200 shadow-lg text-center max-w-md mx-auto">
+                    <div id="reader" class="w-full"></div>
+                    <button onclick="stopScanner()" class="mt-4 bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-semibold">إغلاق الكاميرا</button>
                 </div>
 
                 <!-- قائمة الشحنات -->
-                <div id="worker-shipments-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- يتم عرض كروت الشحنات هنا عبر JS -->
-                </div>
+                <div id="worker-shipments-list" class="space-y-4"></div>
             </section>
 
-            <!-- 📋 3. لوحة الجرد والرقابة -->
-            <section id="audit-panel" class="hidden space-y-6 fade-in">
+            <!-- 3. لوحة مسئول الجرد والرقابة (Audit Panel) -->
+            <section id="audit-panel" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-center mb-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b pb-4">
                         <div>
-                            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                <i data-lucide="clipboard-check" class="text-blue-600"></i> الجرد اليومي للمقصف
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <i data-lucide="clipboard-check" class="w-5 h-5 text-blue-600"></i>
+                                الجرد اليومي للمقصف
                             </h3>
-                            <p class="text-xs text-gray-500 mt-1">تسجيل المخزون الفعلي والتوالف في نهاية اليوم الدراسي</p>
+                            <p class="text-xs text-gray-500">تسجيل المخزون الفعلي والتوالف في نهاية اليوم الدراسي</p>
                         </div>
-                        <button onclick="saveDailyInventory()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
-                            <i data-lucide="save" class="w-4 h-4"></i> اعتماد الجرد
+                        <button onclick="saveDailyInventory()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition-colors flex items-center gap-2">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            اعتماد الجرد
                         </button>
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-right border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50 text-xs text-gray-500 border-b">
-                                    <th class="p-3">اسم الصنف</th>
+                        <table class="w-full text-right text-sm">
+                            <thead class="bg-gray-50 text-gray-600 text-xs">
+                                <tr>
+                                    <th class="p-3 rounded-r-lg">اسم الصنف</th>
                                     <th class="p-3">النوع</th>
                                     <th class="p-3 text-center">الوارد اليوم</th>
                                     <th class="p-3 text-center">المبيعات المقدرة</th>
-                                    <th class="p-3 text-center w-32">المتبقي الفعلي</th>
-                                    <th class="p-3 text-center w-28">التالف/الهادر</th>
+                                    <th class="p-3 text-center">المتبقي الفعلي</th>
+                                    <th class="p-3 text-center rounded-l-lg">التالف/الهادر</th>
                                 </tr>
                             </thead>
-                            <tbody id="inventory-body">
-                                <!-- يتم إدراج صفوف الجرد عبر JS -->
-                            </tbody>
+                            <tbody id="inventory-body"></tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- 📊 4. لوحة الإدارة العامة والذكاء الاصطناعي -->
-            <section id="admin-panel" class="hidden space-y-6 fade-in">
-                <!-- بطاقات إحصائية سريعة -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                        <p class="text-xs text-gray-500 font-semibold mb-1">إجمالي الشحنات</p>
-                        <h4 id="stat-total-shipments" class="text-2xl font-bold text-gray-800">0</h4>
+            <!-- 4. لوحة الإدارة والذكاء الاصطناعي (Admin Panel) -->
+            <section id="admin-panel" class="hidden space-y-6">
+                <!-- كروت الإحصائيات -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <span class="text-xs font-bold text-gray-400 block mb-1">إجمالي الشحنات</span>
+                        <span id="stat-total-shipments" class="text-2xl font-black text-gray-800 font-mono">0</span>
                     </div>
-                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                        <p class="text-xs text-gray-500 font-semibold mb-1">ملاحظات/عجز استلام</p>
-                        <h4 id="stat-pending-issues" class="text-2xl font-bold text-amber-600">0</h4>
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <span class="text-xs font-bold text-gray-400 block mb-1">ملاحظات/عجز استلام</span>
+                        <span id="stat-pending-issues" class="text-2xl font-black text-amber-600 font-mono">0</span>
                     </div>
-                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                        <p class="text-xs text-gray-500 font-semibold mb-1">قيمة المخزون الحالية</p>
-                        <h4 id="stat-inventory-value" class="text-2xl font-bold text-blue-600">0 ر.س</h4>
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <span class="text-xs font-bold text-gray-400 block mb-1">قيمة المخزون الحالية</span>
+                        <span id="stat-inventory-value" class="text-2xl font-black text-blue-600 font-mono">0 ر.س</span>
                     </div>
-                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                        <p class="text-xs text-gray-500 font-semibold mb-1">خسائر الهدر اليومية</p>
-                        <h4 id="stat-waste-value" class="text-2xl font-bold text-red-500">0 ر.س</h4>
+                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                        <span class="text-xs font-bold text-gray-400 block mb-1">خسائر الهدر اليومية</span>
+                        <span id="stat-waste-value" class="text-2xl font-black text-red-600 font-mono">0 ر.س</span>
                     </div>
                 </div>
 
-                <!-- قسم تحليل الذكاء الاصطناعي والتقارير التنفيذية -->
+                <!-- صندوق تقارير AI -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b pb-4">
                         <div>
-                            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                <i data-lucide="sparkles" class="text-purple-600"></i> التقرير التنفيذي الذكي (AI)
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <i data-lucide="bot" class="w-5 h-5 text-purple-600"></i>
+                                التقرير التنفيذي الذكي (AI)
                             </h3>
-                            <p class="text-xs text-gray-500 mt-1">توليد توصيات وقائية لمعالجة الهدر وضبط النفقات تلقائياً</p>
+                            <p class="text-xs text-gray-500">توليد توصيات وقائية لمعالجة الهدر وضبط النفقات تلقائياً</p>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="generateAIReport()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-lg shadow-purple-100">
-                                <i data-lucide="cpu" class="w-4 h-4"></i> توليد تقرير AI
+                            <button onclick="generateAIReport()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                توليد تقرير AI
                             </button>
-                            <button onclick="printReport()" class="border border-gray-200 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1">
-                                <i data-lucide="printer" class="w-4 h-4"></i> طباعة
+                            <button onclick="printReport()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1">
+                                <i data-lucide="printer" class="w-4 h-4"></i>
+                                طباعة
                             </button>
                         </div>
                     </div>
 
-                    <div id="ai-report-content" class="bg-slate-50 border border-slate-200 rounded-xl p-5 min-h-[150px]">
-                        <p class="text-sm text-gray-500 text-center py-8">اضغط على "توليد تقرير AI" للبدء بالتحليل المباشر للعمليات...</p>
+                    <div id="ai-report-content" class="bg-purple-50/50 p-6 rounded-xl border border-purple-100 min-h-[150px]">
+                        <p class="text-gray-400 text-sm text-center py-8">اضغط على "توليد تقرير AI" للبدء بالتحليل المباشر للعمليات...</p>
                     </div>
                 </div>
             </section>
@@ -266,50 +276,55 @@
         </main>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 🪟 نافذة مطابقة واستلام الشحنة (Modal)     -->
-    <!-- ========================================== -->
-    <div id="receive-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 fade-in">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
-                    <i data-lucide="check-circle-2" class="text-green-600"></i> تأكيد استلام الشحنة <span id="receive-modal-id" class="text-blue-600 font-mono"></span>
+    <!-- نافذة تأكيد الاستلام المباشر (Receive Modal) -->
+    <div id="receive-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="font-bold text-gray-900 text-lg flex items-center gap-2">
+                    <i data-lucide="package-check" class="w-5 h-5 text-blue-600"></i>
+                    تأكيد استلام الشحنة (<span id="receive-modal-id" class="font-mono text-blue-600"></span>)
                 </h3>
-                <button onclick="closeReceiveModal()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeReceiveModal()" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
             </div>
 
             <input type="hidden" id="receive-modal-id-hidden">
 
-            <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-2">طابق الكميات الفعليه المستلمة:</label>
-                <div id="receive-modal-items" class="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    <!-- يتم إدراج عناصر المطابقة هنا عبر JS -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-2">طابق الكميات الفعليّة المستلمة:</label>
+                    <div id="receive-modal-items" class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-100"></div>
                 </div>
-            </div>
 
-            <label class="flex items-center gap-2 p-3 rounded-xl border border-green-200 bg-green-50 text-green-800 text-xs font-bold">
-                <input type="checkbox" id="receive-modal-goods-verified" class="w-4 h-4 text-green-600 rounded" checked>
-                البضاعة موثقة ومستلمة مباشرة
-            </label>
+                <div class="flex items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <input type="checkbox" id="receive-modal-goods-verified" class="w-4 h-4 text-blue-600 rounded" checked>
+                    <label for="receive-modal-goods-verified" class="text-xs text-blue-900 font-semibold">البضاعة موثقة ومستلمة مباشرة</label>
+                </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">ملاحظات المستلم (في حال وجود عجز أو تلف)</label>
-                <textarea id="receive-modal-notes" rows="2" placeholder="اكتب ملاحظاتك إن وجدت..." class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500"></textarea>
-            </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">ملاحظات المستلم (في حال وجود عجز أو تلف)</label>
+                    <textarea id="receive-modal-notes" class="w-full border rounded-lg p-2.5 text-sm h-20 focus:ring-2 focus:ring-blue-500" placeholder="اكتب ملاحظاتك هنا..."></textarea>
+                </div>
 
-            <div class="flex items-center gap-2">
-                <input type="checkbox" id="receive-modal-discrepancy" class="w-4 h-4 text-blue-600 rounded">
-                <label for="receive-modal-discrepancy" class="text-xs text-red-600 font-semibold">تسجيل تباين / عجز في هذه الشحنة وإحالتها للإدارة</label>
-            </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="receive-modal-discrepancy" class="w-4 h-4 text-red-600 rounded">
+                    <label for="receive-modal-discrepancy" class="text-xs text-red-600 font-semibold">تسجيل تباين / عجز في هذه الشحنة وإحالتها للإدارة</label>
+                </div>
 
-            <div class="flex gap-3 pt-2">
-                <button onclick="confirmReceive()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold transition-colors">تأكيد مباشر للاستلام</button>
-                <button onclick="closeReceiveModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl font-semibold transition-colors">إلغاء</button>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="confirmReceive()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors shadow-md text-sm">
+                        تأكيد مباشر للاستلام
+                    </button>
+                    <button onclick="closeReceiveModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm">
+                        إلغاء
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 5. استدعاء ملف البرمجة الخاص بك -->
+    <!-- ربط السكريبت الرئيسي -->
     <script src="app.js"></script>
 </body>
 </html>
